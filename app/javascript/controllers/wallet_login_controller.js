@@ -24,12 +24,12 @@ export default class extends Controller {
     // Normalize to EIP-55 checksummed format
     const account = getAddress(rawAccount)
 
-    // 1) nonce из API
+    // 1) nonce из API (auto-provisions user if not exists)
     const resp = await fetch(`/api/v1/users/${account.toLowerCase()}`)
     const data = await resp.json().catch(() => null)
 
     if (!data?.eth_nonce) {
-      this.statusTarget.textContent = "Account not found. Please sign up first."
+      this.statusTarget.textContent = "Failed to get nonce. Please try again."
       return
     }
 

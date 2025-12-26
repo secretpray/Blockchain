@@ -5,15 +5,9 @@
         <h2 class="text-xl font-semibold tracking-tight">Dashboard</h2>
       </div>
       <div class="card-content space-y-4">
-         <div class="grid gap-4 md:grid-cols-2">
-            <div class="p-4 rounded-lg bg-muted/50 border border-border">
-               <div class="text-sm font-medium text-muted-foreground mb-1">Username</div>
-               <div class="font-medium text-lg"><%= Current.user.username %></div>
-            </div>
-            <div class="p-4 rounded-lg bg-muted/50 border border-border">
-               <div class="text-sm font-medium text-muted-foreground mb-1">Ethereum Address</div>
-               <div class="font-mono text-sm break-all"><%= Current.user.eth_address %></div>
-            </div>
+         <div class="p-4 rounded-lg bg-muted/50 border border-border">
+            <div class="text-sm font-medium text-muted-foreground mb-1">Ethereum Address</div>
+            <div class="font-mono text-sm break-all"><%= Current.user.eth_address %></div>
          </div>
       </div>
     </div>
@@ -26,7 +20,7 @@
            A secure, decentralized authentication system built with Ruby on Rails and Ethereum.
         </p>
         <div class="flex gap-4">
-           <%= link_to "Get Started", new_user_path, class: "btn h-11 px-8 text-base" %>
+           <%= link_to "Sign In", new_session_path, class: "btn h-11 px-8 text-base" %>
            <%= link_to "Learn More", "#", class: "btn btn-ghost h-11 px-8 text-base" %>
         </div>
      </div>

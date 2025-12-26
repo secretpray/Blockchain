@@ -30,9 +30,9 @@
             <button class="flex items-center gap-2 text-sm text-foreground hover:bg-accent px-3 py-2 rounded-md transition-colors"
                     data-action="click->navbar#toggleDropdown">
               <div class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-semibold">
-                <%= Current.user.username[0].upcase %>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
               </div>
-              <span class="font-medium"><%= Current.user.username %></span>
+              <span class="font-medium font-mono text-xs"><%= Current.user.display_address %></span>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </button>
 
@@ -40,7 +40,6 @@
             <div class="hidden absolute right-0 mt-2 w-72 rounded-md border border-border bg-card shadow-lg" data-navbar-target="dropdownMenu">
               <div class="py-1">
                 <div class="px-4 py-3 border-b border-border space-y-3">
-                  <p class="text-sm font-medium"><%= Current.user.username %></p>
 
                   <%# ETH Address with copy button %>
                   <div class="flex items-center justify-between gap-2  bg-muted/50 rounded-md">
@@ -77,14 +76,13 @@
                 </div>
                 <%= button_to session_path, method: :delete, class: "w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2", form: { data: { turbo: "false" } } do %>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-                  <span>Sign Out</span>
+                  <span>Disconnect</span>
                 <% end %>
               </div>
             </div>
           </div>
         <% else %>
-          <%= link_to "Sign In", new_session_path, class: "btn btn-ghost text-sm h-9 px-4" %>
-          <%= link_to "Sign Up", new_user_path, class: "btn text-sm h-9 px-4" %>
+          <%= link_to "Sign In", new_session_path, class: "btn text-sm h-9 px-4" %>
         <% end %>
       </div>
 

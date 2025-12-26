@@ -4,21 +4,12 @@
       <div class="card-header text-center">
         <h1 class="text-2xl font-semibold tracking-tight">Create an account</h1>
         <p class="text-sm text-muted-foreground mt-2">
-          Enter your username and connect wallet
+          Connect your wallet to sign up
         </p>
       </div>
 
       <div class="card-content space-y-6">
         <%= form_with model: @user, class: "space-y-4" do |f| %>
-          <div class="space-y-2">
-            <%= f.label :username, class: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" %>
-            <%= f.text_field :username, class: "input h-10", autocomplete: "off", placeholder: "johndoe" %>
-
-            <% @user.errors.full_messages_for(:username).each do |m| %>
-              <p class="text-sm text-destructive font-medium"><%= m %></p>
-            <% end %>
-          </div>
-
           <%= f.hidden_field :eth_address, data: { "wallet-signup-target": "address" } %>
 
           <%# Errors for eth_address %>
