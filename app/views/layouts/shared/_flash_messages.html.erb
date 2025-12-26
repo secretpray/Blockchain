@@ -1,0 +1,15 @@
+<% if flash[:notice].present? %>
+  <div class="card">
+    <div class="card-content">
+      <p class="text-sm"><%= flash[:notice] %></p>
+    </div>
+  </div>
+<% end %>
+
+<% if flash[:alert].present? %>
+  <div class="card border-destructive/40">
+    <div class="card-content">
+      <p class="text-sm text-destructive"><%= flash[:alert] %></p>
+    </div>
+  </div>
+<% end %>

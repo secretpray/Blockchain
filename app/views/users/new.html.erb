@@ -1,0 +1,82 @@
+<div class="flex min-h-[60vh] items-center justify-center">
+  <div class="w-full max-w-md" data-controller="wallet-signup">
+    <div class="card shadow-lg">
+      <div class="card-header text-center">
+        <h1 class="text-2xl font-semibold tracking-tight">Create an account</h1>
+        <p class="text-sm text-muted-foreground mt-2">
+          Enter your username and connect wallet
+        </p>
+      </div>
+
+      <div class="card-content space-y-6">
+        <%= form_with model: @user, class: "space-y-4" do |f| %>
+          <div class="space-y-2">
+            <%= f.label :username, class: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" %>
+            <%= f.text_field :username, class: "input h-10", autocomplete: "off", placeholder: "johndoe" %>
+
+            <% @user.errors.full_messages_for(:username).each do |m| %>
+              <p class="text-sm text-destructive font-medium"><%= m %></p>
+            <% end %>
+          </div>
+
+          <%= f.hidden_field :eth_address, data: { "wallet-signup-target": "address" } %>
+
+          <%# Errors for eth_address %>
+          <% @user.errors.full_messages_for(:eth_address).each do |m| %>
+            <div class="p-3 bg-destructive/10 border border-destructive/40 rounded-md">
+              <p class="text-sm text-destructive font-medium"><%= m %></p>
+            </div>
+          <% end %>
+
+          <div class="space-y-3 pt-2">
+            <%# Connect Wallet Button - shown by default %>
+            <button type="button"
+                    class="btn w-full h-10 btn-secondary border border-border"
+                    data-action="wallet-signup#connectWallet"
+                    data-wallet-signup-target="connectButton">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+              </svg>
+              Connect Wallet
+            </button>
+
+            <%# Connected Wallet Info - hidden by default %>
+            <div class="hidden p-3 bg-muted/50 rounded-lg border border-border"
+                 data-wallet-signup-target="connectedInfo">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <div class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                      <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-muted-foreground">Connected wallet</p>
+                    <p class="text-sm font-mono font-medium truncate" data-wallet-signup-target="addressDisplay"></p>
+                  </div>
+                </div>
+                <button type="button"
+                        class="btn btn-ghost btn-sm h-8 px-3 text-xs"
+                        data-action="wallet-signup#disconnectWallet"
+                        title="Change wallet">
+                  Change
+                </button>
+              </div>
+            </div>
+
+            <%= f.submit "Create Account",
+                class: "btn w-full h-10 opacity-50 cursor-not-allowed",
+                disabled: true,
+                data: { "wallet-signup-target": "submitButton" } %>
+          </div>
+        <% end %>
+      </div>
+      
+       <div class="card-footer justify-center">
+         <p class="text-sm text-muted-foreground">
+           Already have an account? <%= link_to "Sign in", new_session_path, class: "text-primary hover:underline font-medium" %>
+         </p>
+      </div>
+    </div>
+  </div>
+</div>

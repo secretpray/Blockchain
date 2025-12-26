@@ -1,0 +1,81 @@
+<%# Backdrop Overlay %>
+<div class="hidden fixed inset-0 bg-black/50 z-[60] md:hidden transition-opacity duration-300"
+     data-navbar-target="backdrop"
+     data-action="click->navbar#closeSidebar"></div>
+
+<%# Mobile Sidebar %>
+<div class="fixed top-0 left-0 h-screen w-64 bg-card border-r border-border z-[70] md:hidden transform -translate-x-full transition-transform duration-300 ease-in-out"
+     data-navbar-target="sidebar">
+  <div class="flex flex-col h-full">
+    <%# Sidebar Header %>
+    <div class="flex items-center justify-between p-4 border-b border-border">
+      <div class="flex items-center space-x-2">
+        <div class="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <span class="font-bold text-sm">Siwe Rails</span>
+      </div>
+      <button class="p-1 hover:bg-accent rounded-md transition-colors" data-action="click->navbar#closeSidebar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <%# Sidebar Content - scrollable %>
+    <div class="flex-1 overflow-y-auto p-4">
+      <% if Current.user %>
+        <%# User Info %>
+        <div class="px-3 py-3 bg-muted/50 rounded-lg border border-border space-y-3">
+          <p class="text-sm font-medium"><%= Current.user.username %></p>
+
+          <%# ETH Address with copy button %>
+          <div class="flex items-center justify-between gap-2 p-2 bg-background/50 rounded-md">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground flex-shrink-0">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+              <p class="text-xs text-muted-foreground font-mono truncate">
+                <%= Current.user.eth_address[0..5] %>...<%= Current.user.eth_address[-4..-1] %>
+              </p>
+            </div>
+            <button type="button"
+                    class="p-1 hover:bg-accent rounded transition-colors flex-shrink-0"
+                    data-action="click->navbar#copyAddress"
+                    data-address="<%= Current.user.eth_address %>"
+                    data-navbar-target="copyButtonMobile"
+                    title="Copy address">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-navbar-target="copyIconMobile">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden text-green-500" data-navbar-target="checkIconMobile">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <%# Balance %>
+          <div class="flex items-center gap-2 pt-2 border-t border-border">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <span class="text-xs font-medium" data-navbar-target="balanceMobile">
+              <span class="text-muted-foreground">Loading...</span>
+            </span>
+          </div>
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <%= link_to "Sign In", new_session_path, class: "btn btn-ghost text-sm h-10 w-full justify-start" %>
+          <%= link_to "Sign Up", new_user_path, class: "btn text-sm h-10 w-full justify-start" %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Sidebar Footer - fixed at bottom %>
+    <% if Current.user %>
+      <div class="p-4 border-t border-border">
+        <%= button_to session_path, method: :delete, class: "w-full text-left px-3 py-2 text-sm hover:bg-accent rounded-md transition-colors flex items-center gap-2", form: { data: { turbo: "false" } } do %>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          <span>Sign Out</span>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

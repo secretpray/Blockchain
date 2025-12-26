@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/*
+  Tailwind v4 (CSS-first).
+  Tokens in @theme, components via @utility.
+*/
+
+/* Dark-only tokens (shadcn-like) */
+@theme {
+  /* Colors */
+  --color-background: #0d0a0e;
+  --color-foreground: #f2ecf3;
+
+  --color-card: #1f1820;
+  --color-card-foreground: #f2ecf3;
+
+  --color-popover: #1f1820;
+  --color-popover-foreground: #f2ecf3;
+
+  --color-primary: #6d65fe;
+  --color-primary-foreground: #fcf6fd;
+
+  --color-secondary: #565265;
+  --color-secondary-foreground: #f2ecf3;
+
+  --color-muted: #1d191e;
+  --color-muted-foreground: #a19ca2;
+
+  --color-accent: #3f3355;
+  --color-accent-foreground: #f2ecf3;
+
+  --color-destructive: #df0c07;
+  --color-destructive-foreground: #f2ecf3;
+
+  --color-border: #4e4258;
+  --color-input: #4e4258;
+  --color-ring: #6b4cae;
+
+  /* Sidebar Colors */
+  --color-sidebar: #181519;
+  --color-sidebar-foreground: #f2ecf3;
+  --color-sidebar-primary: #0e8aaf;
+  --color-sidebar-primary-foreground: #f2ecf3;
+  --color-sidebar-accent: #302c31;
+  --color-sidebar-accent-foreground: #f2ecf3;
+  --color-sidebar-border: #3d393e4d;
+  --color-sidebar-ring: #0e8aaf;
+
+  /* Chart Colors */
+  --color-chart-1: #473ded;
+  --color-chart-2: #25984d;
+  --color-chart-3: #b464e8;
+  --color-chart-4: #559400;
+  --color-chart-5: #007df3;
+
+  /* Radius */
+  --radius-sm: 0.5rem; /* derived from base */
+  --radius-md: 0.625rem; /* ~0.625rem as requested for base */
+  --radius-lg: 0.75rem;
+
+  /* Spacing overrides if needed, but Tailwind defaults are usually fine. 
+     User requested Spacing 0,25 rem. This likely matches tailwind's '1' unit.
+  */
+
+  /* Shadow - applying as a custom utility or variable if possible. 
+     Tailwind v4 handles shadows via utilities. 
+     We can override --shadow-sm etc. 
+  */
+  --shadow-custom: 0 1px 3px 0 rgba(0, 0, 0, 0.01); 
+}
+
+/* Dark-only: without html.dark, via color-scheme */
+@layer base {
+  html { color-scheme: dark; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Buttons */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+      rounded-md px-4 py-2 text-sm font-medium
+      bg-primary text-primary-foreground
+      shadow-sm
+      hover:opacity-90 transition
+      focus-visible:outline-none
+      focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .btn-sm {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground;
+  }
+
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-foreground hover:bg-muted;
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    @apply opacity-50 pointer-events-none;
+  }
+}
+
+/* Inputs */
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-input bg-card px-3 py-2 text-sm
+      shadow-[var(--shadow-custom)]
+      placeholder:text-muted-foreground
+      focus-visible:outline-none
+      focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
+/* Cards */
+@layer components {
+  .card {
+    @apply rounded-lg border border-border bg-card text-card-foreground shadow-[var(--shadow-custom)];
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-border;
+  }
+
+  .card-content {
+    @apply px-6 py-4;
+  }
+  
+  .card-footer {
+    @apply px-6 py-4 border-t border-border flex items-center;
+  }
+}
+
+/* "destructive" text helper */
+@layer utilities {
+  .text-destructive {
+    color: var(--color-destructive);
+  }
+}
