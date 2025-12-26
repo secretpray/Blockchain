@@ -4,7 +4,6 @@ class SessionsController < ApplicationController
   def new; end
 
   def create
-    return render_invalid("Unknown account") unless @user
     return if siwe_payload_invalid?
 
     sign_in_user(@user)
@@ -19,7 +18,9 @@ class SessionsController < ApplicationController
 
   def load_user
     @address = eth_address_param
-    @user = User.find_by(eth_address: @address)
+    @user = User.find_or_create_by(eth_address: @address) do |u|
+      u.eth_nonce = Siwe::Util.generate_nonce
+    end
   end
 
   def eth_address_param

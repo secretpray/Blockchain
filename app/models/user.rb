@@ -2,7 +2,6 @@
 class User < ApplicationRecord
   before_validation :normalize_eth_address
 
-  validates :username, presence: true, uniqueness: true
   validates :eth_address,
     presence: { message: "Please connect your wallet" },
     uniqueness: { case_sensitive: false, message: "This wallet is already registered. Please use a different wallet or sign in." },
@@ -11,6 +10,11 @@ class User < ApplicationRecord
 
   def rotate_nonce!
     update!(eth_nonce: Siwe::Util.generate_nonce)
+  end
+
+  # Helper method to display shortened address
+  def display_address
+    "#{eth_address[0..5]}...#{eth_address[-4..]}"
   end
 
   private

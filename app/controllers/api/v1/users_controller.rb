@@ -11,8 +11,9 @@ class Api::V1::UsersController < ApplicationController
     # [TODO] Move regex to model validation
     return render json: nil unless address.match?(/\A0x[a-f0-9]{40}\z/)
 
-    user = User.find_by(eth_address: address)
-    return render json: nil unless user
+    user = User.find_or_create_by(eth_address: address) do |u|
+      u.eth_nonce = Siwe::Util.generate_nonce
+    end
 
     render json: { eth_nonce: user.eth_nonce }
   end
