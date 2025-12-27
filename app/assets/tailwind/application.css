@@ -151,3 +151,18 @@
     color: var(--color-destructive);
   }
 }
+
+/* Custom Industrial Design Utilities */
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, #3f3355 1px, transparent 1px),
+                      linear-gradient(to bottom, #3f3355 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: linear-gradient(to bottom, transparent, 10%, white, 90%, transparent);
+  }
+
+  .font-tech {
+    font-family: 'Courier New', Courier, monospace; /* Fallback/Simple tech font */
+    letter-spacing: -0.05em;
+  }
+}

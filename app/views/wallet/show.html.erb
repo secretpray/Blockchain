@@ -1,0 +1,205 @@
+<div class="min-h-[80vh] flex flex-col gap-8 relative">
+  <!-- Grid Background Pattern -->
+  <div class="absolute inset-0 bg-grid-pattern opacity-[0.03] z-0 pointer-events-none"></div>
+
+  <!-- Header Section -->
+  <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-border pb-6">
+    <div class="space-y-1">
+      <h1 class="text-3xl font-bold tracking-tight uppercase font-tech text-primary">
+        <span class="text-muted-foreground opacity-50 mr-2">///</span>
+        Wallet_Link
+      </h1>
+      <p class="text-sm text-muted-foreground font-tech">SECURE_CONNECTION_ESTABLISHED</p>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <div class="hidden md:flex flex-col items-end mr-4">
+        <span class="text-[10px] uppercase text-muted-foreground tracking-wider">Network Status</span>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span class="text-xs font-mono text-green-500">ONLINE</span>
+        </div>
+      </div>
+      <%= link_to session_path, data: { turbo_method: :delete }, class: "group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-md border border-destructive/50 bg-destructive/10 px-6 font-medium text-destructive transition-all hover:bg-destructive/20 active:scale-95" do %>
+        <span class="mr-2 text-xs uppercase tracking-widest">Disconnect</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:rotate-180">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+          <line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="relative z-10 grid gap-6 md:grid-cols-12">
+    <!-- Main Info Column (Left) -->
+    <div class="md:col-span-8 space-y-6">
+      <!-- Balance Card -->
+      <div
+        class="relative overflow-hidden rounded-xl border border-border bg-card/50 p-6 md:p-8 backdrop-blur-sm shadow-[var(--shadow-custom)] group"
+        data-controller="wallet-balance"
+        data-wallet-balance-address-value="<%= @user.eth_address %>"
+      >
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+          </svg>
+        </div>
+
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-4">
+            <span class="inline-block rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary uppercase tracking-wider border border-primary/20">
+              Total Balance
+            </span>
+            <button
+              data-action="click->wallet-balance#refresh"
+              class="text-xs text-primary hover:underline flex items-center gap-1"
+              title="Refresh balance"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-5xl md:text-7xl font-bold tracking-tighter text-foreground font-mono" data-wallet-balance-target="balance">0.00</span>
+            <span class="text-xl md:text-2xl font-light text-muted-foreground">ETH</span>
+          </div>
+          <div class="mt-2 text-sm text-muted-foreground font-mono" data-wallet-balance-target="usdValue">
+            ≈ $0.00 USD
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground" data-wallet-balance-target="status"></div>
+
+          <div class="mt-8 flex flex-wrap gap-4">
+            <button class="flex-1 min-w-[120px] bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-11 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="19 12 12 19 5 12"></polyline>
+              </svg>
+              DEPOSIT
+            </button>
+            <button class="flex-1 min-w-[120px] border border-input bg-transparent hover:bg-accent hover:text-accent-foreground inline-flex h-11 items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+              TRANSFER
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div
+        class="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden"
+        data-controller="transaction-history"
+        data-transaction-history-address-value="<%= @user.eth_address %>"
+      >
+        <div class="flex items-center justify-between border-b border-border p-4 bg-muted/30">
+          <h3 class="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Transaction Log
+          </h3>
+          <button
+            data-action="click->transaction-history#refresh"
+            class="text-xs text-primary hover:underline flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+
+        <!-- Loading State -->
+        <div data-transaction-history-target="loading" class="p-8 text-center">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+          </div>
+          <p class="text-muted-foreground text-sm font-mono">LOADING_TRANSACTIONS...</p>
+        </div>
+
+        <!-- Transaction List -->
+        <div data-transaction-history-target="list"></div>
+
+        <!-- Empty State -->
+        <div data-transaction-history-target="empty" class="p-8 text-center hidden">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4 opacity-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </div>
+          <p class="text-muted-foreground text-sm font-mono">NO_TRANSACTIONS_DETECTED</p>
+          <div class="h-1 w-24 bg-border mx-auto mt-4 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Column (Right) -->
+    <div class="md:col-span-4 flex flex-col gap-6">
+      <!-- Address Plate -->
+      <div class="rounded-xl border border-border bg-muted/20 p-4 backdrop-blur-sm shrink-0">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ID_PLATE</span>
+          <span class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
+        </div>
+        <div class="group relative rounded bg-black/40 p-3 font-mono text-xs text-foreground border border-border/50 break-all transition-colors hover:border-primary/40 hover:bg-black/60">
+          <%= @user.eth_address %>
+          <button
+            onclick="navigator.clipboard.writeText('<%= @user.eth_address %>')"
+            class="absolute right-2 top-2 rounded bg-muted p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground"
+            title="Copy to clipboard"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Assets List Stub -->
+      <div class="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden flex-1 min-h-[200px] flex flex-col">
+        <div class="p-4 border-b border-border bg-muted/30 shrink-0">
+          <h3 class="text-sm font-medium uppercase tracking-wider text-muted-foreground">Assets Inventory</h3>
+        </div>
+        <div class="p-6 overflow-y-auto custom-scrollbar">
+          <div class="space-y-4">
+            <!-- Asset Item - ETH -->
+            <div class="flex items-center justify-between p-3 rounded border border-border/50 bg-background/50 hover:opacity-100 transition-opacity cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold">ETH</span>
+                  <span class="text-[10px] text-muted-foreground">Ethereum</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs font-mono" data-wallet-balance-target="balance">0.00</div>
+              </div>
+            </div>
+            
+             <!-- Empty State for real -->
+             <div class="pt-4 text-center">
+                 <p class="text-[10px] text-muted-foreground uppercase font-mono">System scanning...</p>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

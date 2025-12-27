@@ -1,4 +1,10 @@
+# Controller to handle user sessions using SIWE authentication
 class SessionsController < ApplicationController
+  # skip_forgery_protection only: :create # disable CSRF for testing purposes only
+  # Rate limiting: prevent brute force attacks from single IP
+  # 10 authentication attempts per minute
+  rate_limit to: 10, within: 1.minute, by: -> { request.remote_ip }, only: :create
+
   before_action :load_user, only: :create
 
   def new; end
@@ -91,7 +97,7 @@ class SessionsController < ApplicationController
     session[:user_id] = user.id
     user.rotate_nonce! # Prevent replay attacks by rotating nonce
 
-    redirect_to root_path, notice: "Signed in"
+    redirect_to wallet_path, notice: "Signed in"
   end
 
   def render_invalid(msg)

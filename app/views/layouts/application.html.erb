@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
   <head>
-    <title><%= content_for(:title) || "Siwe Rails" %></title>
+    <title><%= content_for(:title) || "Blockchain Auth" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Siwe Rails">
+    <meta name="application-name" content="Blockchain Auth">
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -27,8 +27,12 @@
     <%= render 'shared/navbar' %>
     <%= render 'shared/sidebar' %>
 
-    <main class="container mx-auto max-w-4xl px-4 py-8 space-y-8">
+    <!-- Flash Notifications -->
+    <div id="flash-section">
       <%= render 'layouts/shared/flash_messages' %>
+    </div>
+
+    <main class="container mx-auto max-w-4xl px-4 py-8 space-y-8">
       <%= yield %>
     </main>
   </body>
