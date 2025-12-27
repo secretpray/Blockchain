@@ -9,12 +9,13 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  root "home#index"
+  root "root#index"
 
   get "up" => "rails/health#show", as: :rails_health_check
 
   resources :users, only: %i[new create]
   resource  :session, only: %i[new create destroy]
+  resource  :wallet, only: :show, controller: "wallet"
 
 
   namespace :api do

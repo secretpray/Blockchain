@@ -1,15 +1,5 @@
-<% if flash[:notice].present? %>
-  <div class="card">
-    <div class="card-content">
-      <p class="text-sm"><%= flash[:notice] %></p>
-    </div>
-  </div>
-<% end %>
-
-<% if flash[:alert].present? %>
-  <div class="card border-destructive/40">
-    <div class="card-content">
-      <p class="text-sm text-destructive"><%= flash[:alert] %></p>
-    </div>
-  </div>
+<% if flash.any? %>
+  <% flash.each do |key, value| %>
+    <%= render 'shared/flash_content', key: key, value: value %>
+  <% end %>
 <% end %>
