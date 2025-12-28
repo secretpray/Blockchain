@@ -116,25 +116,35 @@ const accounts = await ethereum.request({
   method: 'eth_requestAccounts'
 });
 const address = accounts[0]; // e.g., "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+
+// 2. Request nonce from server (does NOT create User)
+const response = await fetch(`/api/v1/users/${address.toLowerCase()}`);
+const data = await response.json();
+const nonce = data.eth_nonce; // Stored in cache, not database
 ```
 
 **Server Side (Rails):**
 ```ruby
-# SessionsController#create - load_user callback
-def load_user
-  @address = params[:eth_address].to_s.downcase
+# Api::V1::UsersController#show
+def show
+  address = params[:eth_address].to_s.downcase
 
-  # Find existing user or create new one
-  @user = User.find_or_create_by(eth_address: @address) do |u|
-    u.eth_nonce = Siwe::Util.generate_nonce  # Random 8+ character string
-  end
+  # Generate nonce and store in cache (NOT in database)
+  nonce = SecureRandom.hex(16)
+  cache_key = "siwe_nonce:#{address}"
+
+  # Store with 10 minute TTL (auto-expiration)
+  Rails.cache.write(cache_key, nonce, expires_in: 10.minutes)
+
+  render json: { eth_nonce: nonce }
 end
 ```
 
 **Why nonce?**
 - Prevents replay attacks (same signature can't be reused)
 - Unique for each authentication attempt
-- Rotated after successful login
+- Auto-expires in cache (10 minutes TTL)
+- **No User record created** until successful verification
 
 ### Phase 2: SIWE Message Construction
 
@@ -196,29 +206,30 @@ Before cryptographic verification, multiple security layers are checked:
 
 **Server Side (Rails - SiweAuthenticationService):**
 ```ruby
-# Security checks BEFORE signature verification
+# Security checks BEFORE signature verification (cache-based)
 def perform_security_checks
-  # 1. Per-user rate limiting (3 attempts per minute)
-  unless user.can_attempt_auth?
-    @errors << "Too many authentication attempts. Please wait 1 minute."
+  # 1. Check if nonce exists in cache
+  cached_nonce = Rails.cache.read("siwe_nonce:#{eth_address}")
+  unless cached_nonce
+    @errors << "Nonce not found or expired. Please request a new one."
     return false
   end
 
-  # 2. Nonce TTL validation (10 minutes)
-  unless user.nonce_valid?
-    user.rotate_nonce!
-    @errors << "Nonce expired. Please refresh and try again."
-    return false
-  end
-
-  # 3. One-time nonce usage check (cache-based)
-  if user.nonce_used?
+  # 2. Check if nonce was already used (one-time use)
+  if nonce_already_used?(cached_nonce)
     @errors << "Nonce already used. Please request a new one."
     return false
   end
 
-  # Record attempt for rate limiting
-  user.record_auth_attempt!
+  # 3. Parse SIWE message and verify nonce matches
+  siwe = Siwe::Message.from_message(message)
+  unless siwe.nonce == cached_nonce
+    @errors << "Nonce mismatch. Please try again."
+    return false
+  end
+
+  # 4. Mark nonce as used before verification (prevent concurrent attempts)
+  mark_nonce_as_used(cached_nonce)
   true
 end
 
@@ -285,31 +296,45 @@ def verify(signature, domain, timestamp, nonce)
 end
 ```
 
-### Phase 5: Session Creation & Nonce Rotation
+### Phase 5: User Creation & Session Establishment
 
 **Server Side:**
 ```ruby
+# SiweAuthenticationService#authenticate
+def authenticate
+  return false unless perform_security_checks
+  return false unless verify_signature
+
+  # CRITICAL: Create User ONLY after successful verification
+  @user = User.find_or_create_by!(eth_address: @eth_address)
+
+  # Invalidate nonce (delete from cache)
+  invalidate_nonce
+  true
+end
+
+def invalidate_nonce
+  # Remove nonce from cache after successful authentication
+  Rails.cache.delete("siwe_nonce:#{@eth_address}")
+  Rails.cache.delete("nonce_used:#{@eth_address}:#{@cached_nonce}")
+end
+
+# SessionsController#sign_in_user
 def sign_in_user(user)
-  # 1. Create session (standard Rails session)
   session[:user_id] = user.id
-
-  # 2. CRITICAL: Rotate nonce to prevent replay attacks
-  user.rotate_nonce!
-  # This generates a NEW random nonce and saves it
-  # Old signature is now invalid for future login attempts
-
-  redirect_to root_path, notice: "Signed in"
+  redirect_to wallet_path, notice: "Successfully signed in"
 end
 ```
 
-**Why rotate nonce?**
-- Without rotation, an attacker who intercepts the signature could reuse it
-- Each nonce is single-use only
-- Even if old signatures leak, they're useless
+**Key differences from traditional approach:**
+- User record created **ONLY after** successful signature verification
+- No "phantom" unverified users in database
+- Nonce invalidated by deleting from cache (not rotation)
+- Old signature is invalid (nonce no longer exists in cache)
 
 ## Multi-Layer Security System
 
-The application implements a comprehensive defense-in-depth strategy with five security layers working together:
+The application implements a comprehensive defense-in-depth strategy with cache-based security layers:
 
 ### Layer 1: IP-Based Rate Limiting
 
@@ -329,44 +354,28 @@ rate_limit to: 10, within: 1.minute, by: -> { request.remote_ip }, only: :create
 
 **Why this matters**: SIWE signature verification is cryptographically expensive. This prevents attackers from overwhelming the server with verification requests.
 
-### Layer 2: Per-User Rate Limiting
+### Layer 2: Nonce Endpoint Rate Limiting
 
-**Purpose**: Prevent targeted attacks on specific accounts
+**Purpose**: Prevent nonce farming and database spam attacks
 
 **Implementation**:
 ```ruby
-# app/models/concerns/authenticatable.rb
-RATE_LIMIT_WINDOW = 1.minute
-MAX_AUTH_ATTEMPTS = 3
-
-def can_attempt_auth?
-  return true if last_auth_attempt_at.nil?
-  return true if last_auth_attempt_at < RATE_LIMIT_WINDOW.ago
-
-  auth_attempts_count < MAX_AUTH_ATTEMPTS
-end
-
-def record_auth_attempt!
-  if last_auth_attempt_at && last_auth_attempt_at > RATE_LIMIT_WINDOW.ago
-    increment!(:auth_attempts_count)
-  else
-    update!(auth_attempts_count: 1, last_auth_attempt_at: Time.current)
-  end
-end
+# Api::V1::UsersController
+rate_limit to: 30, within: 1.minute, only: :show, by: -> {
+  "#{request.remote_ip}:#{params[:eth_address].to_s.downcase}"
+}
 ```
 
 **Details**:
-- Limit: 3 failed attempts per minute per user
-- Tracking: Database fields `auth_attempts_count` and `last_auth_attempt_at`
-- Reset: Counter resets after 1 minute window expires
-- Scope: User-level (even if attacker uses different IPs)
+- Limit: 30 nonce requests per minute per IP:address combination
+- Scope: Protects against both IP-level and address-level abuse
+- Technology: Rails 8 built-in rate limiter with cache backend
+- Action: Rejects requests with HTTP 429 (Too Many Requests)
 
-**Database Schema**:
-```ruby
-t.integer :auth_attempts_count, default: 0, null: false
-t.datetime :last_auth_attempt_at
-t.index :last_auth_attempt_at
-```
+**Why this matters**:
+- Prevents attackers from flooding cache with nonces
+- Stops database spam attempts (though users aren't created until verification)
+- Each IP can request nonces for different addresses (legitimate multi-user scenarios)
 
 ### Layer 3: Nonce TTL (Time-To-Live)
 
@@ -374,27 +383,24 @@ t.index :last_auth_attempt_at
 
 **Implementation**:
 ```ruby
-# app/models/concerns/authenticatable.rb
-NONCE_TTL = 10.minutes
+# Api::V1::UsersController#show
+nonce = SecureRandom.hex(16)
+cache_key = "siwe_nonce:#{address}"
 
-def nonce_valid?
-  nonce_issued_at && nonce_issued_at > NONCE_TTL.ago
-end
+# Auto-expiration via cache TTL
+Rails.cache.write(cache_key, nonce, expires_in: 10.minutes)
 ```
 
 **Details**:
-- TTL: 10 minutes from nonce issuance
-- Tracking: `nonce_issued_at` timestamp in database
-- Behavior: Expired nonces trigger automatic rotation
-- Cleanup: Automated task rotates stale nonces every 10 minutes
+- TTL: 10 minutes from nonce generation
+- Storage: Rails.cache (Solid Cache in production, PostgreSQL-backed)
+- Behavior: Automatic expiration (no manual cleanup needed)
+- Verification: Nonce lookup fails if expired
 
-**Database Schema**:
-```ruby
-t.datetime :nonce_issued_at
-t.index :nonce_issued_at
-```
-
-**Security benefit**: Even if an attacker intercepts a valid signature, they only have a 10-minute window to use it (and only once - see Layer 4).
+**Security benefit**:
+- Even if an attacker intercepts a valid signature, they only have a 10-minute window to use it
+- No database pollution (nonces auto-expire in cache)
+- No cron jobs needed for cleanup
 
 ### Layer 4: One-Time Nonce Usage
 
@@ -402,109 +408,59 @@ t.index :nonce_issued_at
 
 **Implementation**:
 ```ruby
-# app/models/concerns/authenticatable.rb
-def nonce_used?
-  Rails.cache.read(nonce_used_cache_key).present?
+# SiweAuthenticationService
+def nonce_already_used?(nonce)
+  Rails.cache.read(nonce_used_cache_key(nonce)).present?
 rescue
   false  # Graceful degradation if cache unavailable
 end
 
-def mark_nonce_as_used!
-  Rails.cache.write(nonce_used_cache_key, true, expires_in: NONCE_TTL)
+def mark_nonce_as_used(nonce)
+  Rails.cache.write(nonce_used_cache_key(nonce), true, expires_in: 10.minutes)
 rescue => e
   Rails.logger.warn("Cache unavailable for nonce marking: #{e.message}")
 end
 
-private
-
-def nonce_used_cache_key
-  "nonce_used:#{eth_address}:#{eth_nonce}"
+def nonce_used_cache_key(nonce)
+  "nonce_used:#{@eth_address}:#{nonce}"
 end
 ```
 
 **Details**:
-- Storage: Rails cache (Solid Cache - PostgreSQL-backed)
+- Storage: Rails.cache (Solid Cache in production)
 - Cache key: `"nonce_used:{eth_address}:{nonce}"`
-- Expiration: Automatically expires after NONCE_TTL (10 minutes)
+- Expiration: Automatically expires after 10 minutes
 - Fallback: Graceful degradation if cache is unavailable
-- Post-auth: Nonce rotation provides additional protection
+- Checked BEFORE signature verification (early exit)
 
 **Attack scenario prevented**:
 1. Attacker intercepts valid signature
-2. Legitimate user successfully authenticates (nonce marked as used + rotated)
+2. Legitimate user successfully authenticates (nonce marked as used + invalidated)
 3. Attacker attempts to use intercepted signature
-4. Layer 4 detects nonce was already used → reject
-5. Even if Layer 4 fails, nonce rotation (Layer 5) ensures rejection
+4. Layer 4 detects nonce was already used → reject immediately
+5. Even if Layer 4 fails, nonce invalidation (Layer 5) ensures rejection
 
-### Layer 5: Nonce Rotation After Authentication
+### Layer 5: Nonce Invalidation After Authentication
 
-**Purpose**: Invalidate old signatures immediately after successful authentication
+**Purpose**: Invalidate nonces immediately after successful authentication
 
 **Implementation**:
 ```ruby
-# app/controllers/sessions_controller.rb
-def sign_in_user(user)
-  session[:user_id] = user.id
-  user.rotate_nonce!  # CRITICAL: Prevents signature reuse
-  redirect_to wallet_path, notice: "Successfully signed in"
-end
-
-# app/models/concerns/authenticatable.rb
-def rotate_nonce!
-  update!(
-    eth_nonce: Siwe::Util.generate_nonce,
-    nonce_issued_at: Time.current,
-    auth_attempts_count: 0,
-    last_auth_attempt_at: nil
-  )
+# SiweAuthenticationService#invalidate_nonce
+def invalidate_nonce
+  # Remove nonce from cache after successful authentication
+  Rails.cache.delete("siwe_nonce:#{@eth_address}")
+  Rails.cache.delete("nonce_used:#{@eth_address}:#{@cached_nonce}")
 end
 ```
 
 **Details**:
-- Trigger: Immediately after successful authentication
-- Action: Generate new cryptographically random nonce
-- Side effects: Reset rate limit counters, update timestamp
+- Trigger: Immediately after successful verification and user creation
+- Action: Delete nonce and usage marker from cache
 - Security: Old signature becomes permanently invalid
+- No database writes needed
 
-**Why this is critical**: Even if an attacker bypasses cache-based checks, the rotated nonce ensures the old signature will fail `NonceMismatch` validation.
-
-### Layer 6: Automated Cleanup
-
-**Purpose**: Remove stale data and maintain security hygiene
-
-**Implementation**:
-```ruby
-# config/schedule.rb (whenever gem)
-every 1.day, at: "2:00 am" do
-  rake "users:cleanup_unverified"
-end
-
-every 10.minutes do
-  rake "users:rotate_stale_nonces"
-end
-
-# lib/tasks/users.rake
-task cleanup_unverified: :environment do
-  count = User.stale_unverified.delete_all
-  Rails.logger.info("Cleanup: Deleted #{count} unverified users")
-end
-
-task rotate_stale_nonces: :environment do
-  User.with_stale_nonces.find_each { |user| user.rotate_nonce! }
-end
-```
-
-**Details**:
-- **Daily cleanup** (2:00 AM): Remove users who requested nonce but never authenticated (>7 days old)
-- **10-minute rotation**: Proactively rotate nonces older than TTL
-- **Benefits**: Reduces attack surface, cleans zombie accounts, prevents nonce staleness
-
-**Database Scopes**:
-```ruby
-scope :unverified, -> { where(verified: false) }
-scope :stale_unverified, -> { unverified.where("created_at < ?", 7.days.ago) }
-scope :with_stale_nonces, -> { where("nonce_issued_at < ? OR nonce_issued_at IS NULL", NONCE_TTL.ago) }
-```
+**Why this is critical**: Even if an attacker somehow bypasses one-time usage check, the deleted nonce ensures any retry will fail at nonce lookup (Layer 3).
 
 ### Security Layers Interaction
 
@@ -543,31 +499,29 @@ graph TD
 
 ### Security Configuration Constants
 
-All security parameters are centralized in `app/models/concerns/authenticatable.rb`:
+All security parameters are defined in respective controllers and services:
 
 ```ruby
-module Authenticatable
-  NONCE_TTL = 10.minutes          # Layer 3: Nonce expiration
-  MAX_AUTH_ATTEMPTS = 3            # Layer 2: Max failed attempts
-  RATE_LIMIT_WINDOW = 1.minute    # Layer 2: Rate limit window
-end
-```
+# SiweAuthenticationService
+NONCE_TTL = 10.minutes  # Layer 3: Cache TTL for nonces
 
-And in `app/controllers/sessions_controller.rb`:
-```ruby
-rate_limit to: 10, within: 1.minute  # Layer 1: IP-based limit
+# SessionsController
+rate_limit to: 10, within: 1.minute  # Layer 1: IP-based auth limit
+
+# Api::V1::UsersController
+rate_limit to: 30, within: 1.minute  # Layer 2: Nonce endpoint limit
 ```
 
 ### Attack Scenarios & Mitigations
 
-| Attack Scenario | Without Protection | With Multi-Layer Security |
+| Attack Scenario | Without Protection | With Cache-Based Security |
 |----------------|-------------------|--------------------------|
-| **Brute Force** | Attacker tries thousands of signatures | Layer 1 (IP) + Layer 2 (user) block after 3-10 attempts |
-| **Replay Attack** | Old signature works forever | Layer 4 (one-time use) + Layer 5 (rotation) prevent reuse |
-| **Time-based Replay** | Signature valid indefinitely | Layer 3 (TTL) limits window to 10 minutes |
-| **Distributed Attack** | Different IPs bypass IP limit | Layer 2 (per-user limit) protects individual accounts |
+| **Brute Force** | Attacker tries thousands of signatures | Layer 1 (IP: 10/min) + Layer 2 (nonce: 30/min) rate limits |
+| **Replay Attack** | Old signature works forever | Layer 4 (one-time use) + Layer 5 (invalidation) prevent reuse |
+| **Time-based Replay** | Signature valid indefinitely | Layer 3 (TTL) limits window to 10 minutes (auto-expire) |
 | **DoS via Crypto** | Expensive ECDSA operations overwhelm server | Layer 1 (IP limit) prevents before reaching crypto code |
-| **Zombie Accounts** | Abandoned registrations accumulate | Layer 6 (cleanup) removes stale unverified users |
+| **Database Spam** | Attacker creates millions of phantom users | No phantom users created (verification required first) |
+| **Nonce Farming** | Attacker floods system with nonce requests | Layer 2 (30/min per IP:address) + cache TTL (auto-cleanup) |
 
 ## Security Considerations
 
@@ -745,13 +699,16 @@ flowchart LR
 Key files implementing this algorithm:
 
 - **SessionsController** (`app/controllers/sessions_controller.rb`): Main authentication logic, IP-based rate limiting
-- **SiweAuthenticationService** (`app/services/siwe_authentication_service.rb`): Security checks and SIWE verification
-- **Authenticatable Concern** (`app/models/concerns/authenticatable.rb`): Multi-layer security implementation (rate limiting, TTL, nonce management)
-- **User Model** (`app/models/user.rb`): Nonce management and address validation
+- **SiweAuthenticationService** (`app/services/siwe_authentication_service.rb`): Cache-based security checks and SIWE verification
+- **Api::V1::UsersController** (`app/controllers/api/v1/users_controller.rb`): Nonce generation and endpoint rate limiting
+- **User Model** (`app/models/user.rb`): Minimal model with address validation only
 - **Application Controller** (`app/controllers/application_controller.rb`): Session helpers
-- **Maintenance Tasks** (`lib/tasks/users.rake`): Automated cleanup and security tasks
-- **Cron Schedule** (`config/schedule.rb`): Scheduled security maintenance
 - **Routes** (`config/routes.rb`): Authentication endpoints
+
+**Removed files (cache-based approach):**
+- ~~Authenticatable Concern~~ - Security logic moved to SiweAuthenticationService
+- ~~Maintenance Tasks~~ - No cleanup needed (cache auto-expires)
+- ~~Cron Schedule~~ - No scheduled tasks required
 
 ## Additional Resources
 
@@ -763,4 +720,4 @@ Key files implementing this algorithm:
 ---
 
 **Last Updated**: December 28, 2025
-**Version**: 2.0 - Added Multi-Layer Security System documentation
+**Version**: 3.0 - Cache-based implementation (removed DB-based nonce storage, phantom users, and cron tasks)

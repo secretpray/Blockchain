@@ -20,18 +20,13 @@ class Api::V1::UsersController < ApplicationController
       return render json: { error: "Invalid address format" }, status: :bad_request
     end
 
-    user = User.find_or_create_by(eth_address: address) do |u|
-      u.eth_nonce = Siwe::Util.generate_nonce
-      u.nonce_issued_at = Time.current
-      u.auth_attempts_count = 0
-      u.verified = false
-    end
+    # Generate nonce and store in cache (NOT in database)
+    nonce = SecureRandom.hex(16)
+    cache_key = "siwe_nonce:#{address}"
 
-    # Rotate nonce for existing users (new challenge per request)
-    user.rotate_nonce! if user.persisted? && !user.previously_new_record?
+    # Store with 10 minute TTL (auto-expiration)
+    Rails.cache.write(cache_key, nonce, expires_in: 10.minutes)
 
-    render json: { eth_nonce: user.eth_nonce }
-  rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    render json: { eth_nonce: nonce }
   end
 end
