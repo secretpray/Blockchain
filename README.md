@@ -10,8 +10,7 @@ Web application for user authentication via Ethereum wallets using the Sign-In W
 
 ## Documentation
 
-- [SIWE Authentication Algorithm Documentation](docs/AUTHENTICATION.md) - Detailed explanation of the authentication flow with diagrams
-- [Scheduled Tasks Setup](docs/WHENEVER_SETUP.md) - Cron jobs configuration using whenever gem
+- [SIWE Authentication Algorithm Documentation](docs/AUTHENTICATION.md) - Detailed explanation of the cache-based authentication flow with diagrams
 
 ## Project Description
 
@@ -24,12 +23,12 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 - User session management
 - REST API for retrieving user information by Ethereum addresses
 - Secure storage of Ethereum addresses with normalization and validation
-- Multi-layer security system:
-  - IP-based rate limiting (10 requests/min)
-  - Per-user rate limiting (3 attempts/min)
-  - Nonce TTL validation (10 minutes)
+- Multi-layer security system (cache-based):
+  - IP-based rate limiting (10 requests/min for authentication)
+  - Nonce endpoint rate limiting (30 requests/min per IP:address)
+  - Nonce TTL with auto-expiration (10 minutes)
   - One-time nonce usage protection
-  - Automated cleanup of stale data
+  - No phantom users (created only after successful verification)
 
 ## Technology Stack
 
@@ -41,7 +40,6 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 - **SIWE** (Sign-In With Ethereum) - authentication protocol
 - **Puma** - web server
 - **Solid Cache/Queue/Cable** - Rails 8 built-in solutions for caching, job queues, and WebSocket
-- **Whenever** - cron job management for scheduled tasks
 
 ### Frontend
 
@@ -151,23 +149,15 @@ app/
 ├── controllers/
 │   ├── sessions_controller.rb       # Session management and SIWE authentication
 │   ├── users_controller.rb          # User registration
-│   └── api/v1/users_controller.rb   # REST API
+│   └── api/v1/users_controller.rb   # Nonce generation (cache-based)
 ├── models/
-│   ├── concerns/
-│   │   └── authenticatable.rb       # Security methods (rate limiting, nonce management)
-│   └── user.rb                       # User model with Ethereum address
+│   └── user.rb                       # Minimal user model (eth_address only)
 ├── services/
-│   └── siwe_authentication_service.rb # SIWE verification logic
+│   └── siwe_authentication_service.rb # Cache-based SIWE verification
 └── views/
     ├── home/                         # Home page
     ├── sessions/                     # Sign-in pages
     └── users/                        # Registration pages
-
-config/
-└── schedule.rb                       # Cron jobs schedule (whenever)
-
-lib/tasks/
-└── users.rake                        # Maintenance tasks
 ```
 
 ## API Endpoints
@@ -178,11 +168,13 @@ lib/tasks/
 GET /api/v1/users
 ```
 
-### Get User by Ethereum Address
+### Get Nonce for Ethereum Address
 
 ```http
 GET /api/v1/users/:eth_address
 ```
+
+Returns a nonce for SIWE authentication (stored in cache, not database).
 
 ## Main Routes
 
@@ -236,34 +228,20 @@ bin/rails db:reset
 bin/rails generate migration MigrationName
 ```
 
-## Scheduled Tasks
+## Cache-Based Architecture
 
-The application uses **whenever** gem for automated maintenance tasks:
+The application uses a **cache-based approach** for nonce management:
 
-### Available Tasks
+- **Nonce Storage**: Rails.cache (Solid Cache in production)
+- **Auto-Expiration**: Nonces expire automatically after 10 minutes
+- **No Phantom Users**: Users created only after successful verification
+- **No Cron Jobs**: All cleanup handled by cache TTL
 
-```bash
-# Manual execution
-bin/rails users:cleanup_unverified  # Remove stale unverified users (>7 days)
-bin/rails users:rotate_stale_nonces # Rotate expired nonces
-bin/rails users:stats                # Show user statistics
-```
+**Cache Store Configuration:**
+- Development: MemoryStore
+- Production: Solid Cache (PostgreSQL-backed)
 
-### Cron Schedule
-
-```bash
-# Preview cron jobs
-bundle exec whenever
-
-# Install to crontab (production)
-bundle exec whenever --update-crontab
-```
-
-**Default schedule:**
-- Daily cleanup at 2:00 AM
-- Nonce rotation every 10 minutes
-
-For detailed setup instructions, see [Scheduled Tasks Documentation](docs/WHENEVER_SETUP.md).
+This eliminates the need for database cleanup tasks and scheduled jobs.
 
 ## License
 

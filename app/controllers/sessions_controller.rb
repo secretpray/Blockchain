@@ -10,18 +10,16 @@ class SessionsController < ApplicationController
     address = eth_address_param
     return render_invalid("Invalid address format") unless valid_eth_address?(address)
 
-    user = User.find_by(eth_address: address)
-    return render_invalid("Please request a nonce first by connecting your wallet") unless user
-
     auth_service = SiweAuthenticationService.new(
-      user: user,
+      eth_address: address,
       message: siwe_message_param,
       signature: signature_param,
-      request: request
+      request:
     )
 
     if auth_service.authenticate
-      sign_in_user(user)
+      # User is created inside auth_service after successful verification
+      sign_in_user(auth_service.user)
     else
       render_invalid(auth_service.errors.first)
     end
@@ -52,7 +50,6 @@ class SessionsController < ApplicationController
 
   def sign_in_user(user)
     session[:user_id] = user.id
-    user.rotate_nonce!
     redirect_to wallet_path, notice: "Successfully signed in"
   end
 
