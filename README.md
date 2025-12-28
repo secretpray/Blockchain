@@ -1,6 +1,6 @@
 # Blockchain Auth - SIWE Rails 8
 
-[![Ruby Version](https://img.shields.io/badge/ruby-3.3.6-red.svg)](https://www.ruby-lang.org/)
+[![Ruby Version](https://img.shields.io/badge/ruby-3.4.1-red.svg)](https://www.ruby-lang.org/)
 [![Rails Version](https://img.shields.io/badge/rails-8.1.1-red.svg)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-9.3+-blue.svg)](https://www.postgresql.org/)
 [![SIWE](https://img.shields.io/badge/SIWE-EIP--4361-purple.svg)](https://eips.ethereum.org/EIPS/eip-4361)
@@ -11,7 +11,7 @@ Web application for user authentication via Ethereum wallets using the Sign-In W
 ## Documentation
 
 - [SIWE Authentication Algorithm Documentation](docs/AUTHENTICATION.md) - Detailed explanation of the authentication flow with diagrams
-- [Scheduled Tasks Setup](.tmp/WHENEVER_SETUP.md) - Cron jobs configuration using whenever gem
+- [Scheduled Tasks Setup](docs/WHENEVER_SETUP.md) - Cron jobs configuration using whenever gem
 
 ## Project Description
 
@@ -35,7 +35,7 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 
 ### Backend
 
-- **Ruby** 3.3.6
+- **Ruby** 3.4.1
 - **Rails** 8.1.1
 - **PostgreSQL** - primary database
 - **SIWE** (Sign-In With Ethereum) - authentication protocol
@@ -59,7 +59,7 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 
 ### Required
 
-- Ruby 3.3.6 or higher
+- Ruby 3.4.1 or higher
 - PostgreSQL 9.3 or higher
 - Node.js (for asset pipeline)
 - Yarn or npm
@@ -263,7 +263,7 @@ bundle exec whenever --update-crontab
 - Daily cleanup at 2:00 AM
 - Nonce rotation every 10 minutes
 
-For detailed setup instructions, see [Scheduled Tasks Documentation](.tmp/WHENEVER_SETUP.md).
+For detailed setup instructions, see [Scheduled Tasks Documentation](docs/WHENEVER_SETUP.md).
 
 ## License
 
