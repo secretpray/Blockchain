@@ -11,6 +11,7 @@ Web application for user authentication via Ethereum wallets using the Sign-In W
 ## Documentation
 
 - [SIWE Authentication Algorithm Documentation](docs/AUTHENTICATION.md) - Detailed explanation of the authentication flow with diagrams
+- [Scheduled Tasks Setup](.tmp/WHENEVER_SETUP.md) - Cron jobs configuration using whenever gem
 
 ## Project Description
 
@@ -23,6 +24,12 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 - User session management
 - REST API for retrieving user information by Ethereum addresses
 - Secure storage of Ethereum addresses with normalization and validation
+- Multi-layer security system:
+  - IP-based rate limiting (10 requests/min)
+  - Per-user rate limiting (3 attempts/min)
+  - Nonce TTL validation (10 minutes)
+  - One-time nonce usage protection
+  - Automated cleanup of stale data
 
 ## Technology Stack
 
@@ -34,6 +41,7 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 - **SIWE** (Sign-In With Ethereum) - authentication protocol
 - **Puma** - web server
 - **Solid Cache/Queue/Cable** - Rails 8 built-in solutions for caching, job queues, and WebSocket
+- **Whenever** - cron job management for scheduled tasks
 
 ### Frontend
 
@@ -141,15 +149,25 @@ bin/rails test
 ```
 app/
 ├── controllers/
-│   ├── sessions_controller.rb    # Session management and SIWE authentication
-│   ├── users_controller.rb       # User registration
-│   └── api/v1/users_controller.rb # REST API
+│   ├── sessions_controller.rb       # Session management and SIWE authentication
+│   ├── users_controller.rb          # User registration
+│   └── api/v1/users_controller.rb   # REST API
 ├── models/
-│   └── user.rb                    # User model with Ethereum address
+│   ├── concerns/
+│   │   └── authenticatable.rb       # Security methods (rate limiting, nonce management)
+│   └── user.rb                       # User model with Ethereum address
+├── services/
+│   └── siwe_authentication_service.rb # SIWE verification logic
 └── views/
-    ├── home/                      # Home page
-    ├── sessions/                  # Sign-in pages
-    └── users/                     # Registration pages
+    ├── home/                         # Home page
+    ├── sessions/                     # Sign-in pages
+    └── users/                        # Registration pages
+
+config/
+└── schedule.rb                       # Cron jobs schedule (whenever)
+
+lib/tasks/
+└── users.rake                        # Maintenance tasks
 ```
 
 ## API Endpoints
@@ -218,10 +236,35 @@ bin/rails db:reset
 bin/rails generate migration MigrationName
 ```
 
+## Scheduled Tasks
+
+The application uses **whenever** gem for automated maintenance tasks:
+
+### Available Tasks
+
+```bash
+# Manual execution
+bin/rails users:cleanup_unverified  # Remove stale unverified users (>7 days)
+bin/rails users:rotate_stale_nonces # Rotate expired nonces
+bin/rails users:stats                # Show user statistics
+```
+
+### Cron Schedule
+
+```bash
+# Preview cron jobs
+bundle exec whenever
+
+# Install to crontab (production)
+bundle exec whenever --update-crontab
+```
+
+**Default schedule:**
+- Daily cleanup at 2:00 AM
+- Nonce rotation every 10 minutes
+
+For detailed setup instructions, see [Scheduled Tasks Documentation](.tmp/WHENEVER_SETUP.md).
+
 ## License
 
 MIT License
-
-## Author
-
-SecretPray

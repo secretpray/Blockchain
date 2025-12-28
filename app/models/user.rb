@@ -1,5 +1,8 @@
-# User model with Ethereum address and nonce management
+# frozen_string_literal: true
+
 class User < ApplicationRecord
+  include Authenticatable
+
   before_validation :normalize_eth_address
 
   validates :eth_address,
@@ -8,11 +11,6 @@ class User < ApplicationRecord
     format: { with: /\A0x[a-f0-9]{40}\z/, message: "Invalid Ethereum address format" }
   validates :eth_nonce, presence: true, uniqueness: true
 
-  def rotate_nonce!
-    update!(eth_nonce: Siwe::Util.generate_nonce)
-  end
-
-  # Helper method to display shortened address
   def display_address
     "#{eth_address[0..5]}...#{eth_address[-4..]}"
   end

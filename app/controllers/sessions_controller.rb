@@ -1,18 +1,30 @@
-# Controller to handle user sessions using SIWE authentication
-class SessionsController < ApplicationController
-  # skip_forgery_protection only: :create # disable CSRF for testing purposes only
-  # Rate limiting: prevent brute force attacks from single IP
-  # 10 authentication attempts per minute
-  rate_limit to: 10, within: 1.minute, by: -> { request.remote_ip }, only: :create
+# frozen_string_literal: true
 
-  before_action :load_user, only: :create
+class SessionsController < ApplicationController
+  # IP-based rate limiting (SIWE verify is expensive)
+  rate_limit to: 10, within: 1.minute, by: -> { request.remote_ip }, only: :create
 
   def new; end
 
   def create
-    return if siwe_payload_invalid?
+    address = eth_address_param
+    return render_invalid("Invalid address format") unless valid_eth_address?(address)
 
-    sign_in_user(@user)
+    user = User.find_by(eth_address: address)
+    return render_invalid("Please request a nonce first by connecting your wallet") unless user
+
+    auth_service = SiweAuthenticationService.new(
+      user: user,
+      message: siwe_message_param,
+      signature: signature_param,
+      request: request
+    )
+
+    if auth_service.authenticate
+      sign_in_user(user)
+    else
+      render_invalid(auth_service.errors.first)
+    end
   end
 
   def destroy
@@ -22,11 +34,8 @@ class SessionsController < ApplicationController
 
   private
 
-  def load_user
-    @address = eth_address_param
-    @user = User.find_or_create_by(eth_address: @address) do |u|
-      u.eth_nonce = Siwe::Util.generate_nonce
-    end
+  def valid_eth_address?(address)
+    address.match?(/\A0x[a-f0-9]{40}\z/)
   end
 
   def eth_address_param
@@ -41,67 +50,14 @@ class SessionsController < ApplicationController
     params.require(:signature)
   end
 
-  def siwe_payload
-    {
-      message: siwe_message_param,
-      signature: signature_param,
-      address: @address,
-      user: @user
-    }
-  end
-
-  def siwe_payload_invalid?
-    !verify_siwe!(**siwe_payload)
-  end
-
-  # Verifies SIWE payload (format + signature + nonce + domain + time)
-  # nonce + time checks are performed inside `verify` (Expired/NotValid/InvalidSignature too)
-  def verify_siwe!(message:, signature:, address:, user:)
-    siwe = Siwe::Message.from_message(message)
-
-    # Ensure the address in the SIWE message matches the form address
-    return render_invalid("Address mismatch") unless siwe.address.to_s.downcase == address
-
-    expected_domain = request.host_with_port
-    expected_nonce = user.eth_nonce
-    now_utc = Time.current.utc.iso8601
-
-    siwe.verify(signature, expected_domain, now_utc, expected_nonce)
-
-    true
-  rescue Siwe::ExpiredMessage
-    render_invalid("Signature expired")
-    false
-  rescue Siwe::NotValidMessage
-    render_invalid("Message not valid yet")
-    false
-  rescue Siwe::InvalidSignature
-    render_invalid("Invalid signature")
-    false
-  rescue Siwe::InvalidDomain, Siwe::DomainMismatch
-    render_invalid("Domain mismatch")
-    false
-  rescue Siwe::NonceMismatch, Siwe::InvalidNonce
-    render_invalid("Invalid nonce")
-    false
-  rescue Siwe::UnableToParseMessage
-    render_invalid("Unable to parse SIWE message")
-    false
-  rescue StandardError => e
-    Rails.logger.warn("SIWE verify failed: #{e.class}: #{e.message}")
-    render_invalid("Invalid SIWE payload")
-    false
-  end
-
   def sign_in_user(user)
     session[:user_id] = user.id
-    user.rotate_nonce! # Prevent replay attacks by rotating nonce
-
-    redirect_to wallet_path, notice: "Signed in"
+    user.rotate_nonce!
+    redirect_to wallet_path, notice: "Successfully signed in"
   end
 
   def render_invalid(msg)
     flash.now[:alert] = msg
-    render :new, status: :unprocessable_content
+    render :new, status: :unprocessable_entity
   end
 end
