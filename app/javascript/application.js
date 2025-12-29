@@ -1,6 +1,7 @@
 // Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
 import "@hotwired/turbo-rails"
 import "controllers"
+import "pwa"
 
 // Custom Turbo Stream Actions
 // StreamActions is available via the global Turbo object after importing @hotwired/turbo-rails
