@@ -173,7 +173,12 @@ DATABASE_URL=postgresql://localhost/siwe_rails_development
 ### 5. Run the Application
 
 ```bash
-# For development environment
+# Using Makefile (recommended)
+make dev        # Start development server
+make fresh      # Clean caches and start
+make help       # Show all available commands
+
+# Or directly
 bin/dev
 ```
 
@@ -243,9 +248,13 @@ The project includes the following security tools:
 Running security checks:
 
 ```bash
-bundle exec brakeman
+# Using Makefile (runs all checks)
+make pre-pr
+
+# Or manually
 bundle exec bundler-audit check --update
 bundle exec rubocop
+bundle exec brakeman
 ```
 
 ## Deployment
