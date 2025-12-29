@@ -196,16 +196,15 @@ bin/rails test
 app/
 ├── controllers/
 │   ├── sessions_controller.rb       # Session management and SIWE authentication (EIP-4361)
-│   ├── users_controller.rb          # User registration
+│   ├── wallet_controller.rb         # Wallet dashboard
 │   └── api/v1/users_controller.rb   # Nonce generation (cache-based, rate-limited)
 ├── models/
 │   └── user.rb                       # User model with EIP-55 address normalization
 ├── services/
 │   └── siwe_authentication_service.rb # SIWE verification (EIP-4361 + EIP-191)
 ├── views/
-│   ├── home/                         # Home page
-│   ├── sessions/                     # Sign-in pages
-│   ├── users/                        # Registration pages
+│   ├── root/                         # Home page with wallet login
+│   ├── wallet/                       # Wallet dashboard
 │   └── pwa/
 │       ├── service-worker.js         # PWA Service Worker (offline caching)
 │       └── manifest.json.erb         # PWA Web App Manifest
@@ -216,19 +215,23 @@ app/
 
 ## API Endpoints
 
-### Get List of Users
-
-```http
-GET /api/v1/users
-```
-
 ### Get Nonce for Ethereum Address
 
 ```http
 GET /api/v1/users/:eth_address
 ```
 
-Returns a nonce for SIWE authentication (stored in cache, not database).
+**Parameters:**
+- `eth_address` - Ethereum address (0x prefixed, 40 hex characters)
+
+**Response:**
+```json
+{ "eth_nonce": "a1b2c3d4..." }
+```
+
+**Rate limiting:** 30 requests per minute per IP:address combination
+
+Returns a nonce for SIWE authentication. Nonce is stored in cache (not database) with 10 minute TTL and auto-expires.
 
 ## Main Routes
 

@@ -9,10 +9,6 @@ class Api::V1::UsersController < ApplicationController
     "#{request.remote_ip}:#{params[:eth_address].to_s.downcase}"
   }
 
-  def index
-    render json: nil
-  end
-
   def show
     address = params[:eth_address].to_s.downcase
 
