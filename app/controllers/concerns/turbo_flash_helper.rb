@@ -9,6 +9,6 @@ module TurboFlashHelper
   end
 
   def render_turbo_flash
-    turbo_stream.prepend("flash-section", partial: "shared/flash")
+    turbo_stream.prepend("flash-section", partial: "layouts/shared/flash_messages")
   end
 end
