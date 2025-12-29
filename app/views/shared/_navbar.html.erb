@@ -83,7 +83,9 @@
             </div>
           </div>
         <% else %>
-          <%= link_to "Sign In", new_session_path, class: "btn text-sm h-9 px-4" %>
+          <button type="button" class="btn text-sm h-9 px-4 cursor-pointer" data-action="click->wallet-login#connectAndSign">
+            <span class="mr-1">⚡</span> Sign In
+          </button>
         <% end %>
         </div>
       <% end %>

@@ -1,0 +1,2 @@
+<%= render_turbo_flash %>
+<%= turbo_stream.redirect(wallet_path) if @error_message.blank? %>
