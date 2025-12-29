@@ -178,12 +178,10 @@ Returns a nonce for SIWE authentication (stored in cache, not database).
 
 ## Main Routes
 
-- `GET /` - Home page
-- `GET /users/new` - New user registration
-- `POST /users` - Create user
-- `GET /session/new` - Sign-in page
-- `POST /session` - Sign in via SIWE
+- `GET /` - Home page (includes sign-in form for guests)
+- `POST /session` - Sign in via SIWE (auto-creates user if needed, using Turbo Streams)
 - `DELETE /session` - Sign out
+- `GET /wallet` - Wallet dashboard (requires authentication)
 
 ## Security
 

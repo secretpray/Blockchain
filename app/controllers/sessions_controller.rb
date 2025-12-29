@@ -4,24 +4,17 @@ class SessionsController < ApplicationController
   # IP-based rate limiting (SIWE verify is expensive)
   rate_limit to: 10, within: 1.minute, by: -> { request.remote_ip }, only: :create
 
-  def new; end
-
   def create
-    address = eth_address_param
-    return render_invalid("Invalid address format") unless valid_eth_address?(address)
-
-    auth_service = SiweAuthenticationService.new(
-      eth_address: address,
-      message: siwe_message_param,
-      signature: signature_param,
-      request:
-    )
+    if eth_address_invalid?(eth_address)
+      @error_message = "Invalid address format"
+      return respond_to_authentication_error
+    end
 
     if auth_service.authenticate
-      # User is created inside auth_service after successful verification
       sign_in_user(auth_service.user)
     else
-      render_invalid(auth_service.errors.first)
+      @error_message = auth_service.errors.first
+      respond_to_authentication_error
     end
   end
 
@@ -32,8 +25,8 @@ class SessionsController < ApplicationController
 
   private
 
-  def valid_eth_address?(address)
-    address.match?(/\A0x[a-f0-9]{40}\z/)
+  def eth_address_invalid?(address)
+    !address.match?(/\A0x[a-f0-9]{40}\z/)
   end
 
   def eth_address_param
@@ -48,13 +41,40 @@ class SessionsController < ApplicationController
     params.require(:signature)
   end
 
-  def sign_in_user(user)
-    session[:user_id] = user.id
-    redirect_to wallet_path, notice: "Successfully signed in"
+  def eth_address
+    @eth_address ||= eth_address_param
   end
 
-  def render_invalid(msg)
-    flash.now[:alert] = msg
-    render :new, status: :unprocessable_entity
+  def auth_service
+    @auth_service ||= SiweAuthenticationService.new(
+      eth_address:,
+      message: siwe_message_param,
+      signature: signature_param,
+      request:
+    )
+  end
+
+  def sign_in_user(user)
+    session[:user_id] = user.id
+
+    respond_to do |format|
+      notice = "Successfully signed in"
+      format.turbo_stream do
+        flash.now[:notice] = notice
+      end
+      format.html { redirect_to wallet_path, notice: }
+    end
+  end
+
+  def respond_to_authentication_error
+    respond_to do |format|
+      format.turbo_stream do
+        flash.now[:alert] = @error_message
+        render :create, status: :unprocessable_entity
+      end
+      format.html do
+        redirect_back fallback_location: root_path, alert: @error_message
+      end
+    end
   end
 end

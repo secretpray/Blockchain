@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Blockchain Auth">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="turbo-refresh-method" content="morph">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -23,7 +24,8 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-background text-foreground antialiased font-sans" data-controller="navbar">
+  <body class="min-h-screen bg-background text-foreground antialiased font-sans" 
+        data-controller="navbar <%= 'wallet-login' unless Current.user %>">
     <%= render 'shared/navbar' %>
     <%= render 'shared/sidebar' %>
 

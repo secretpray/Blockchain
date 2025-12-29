@@ -11,6 +11,6 @@ class WalletController < ApplicationController
   def require_authentication
     return if Current.user
 
-    redirect_to new_session_path, alert: "Please connect your wallet to continue"
+    redirect_to root_path, alert: "Please connect your wallet to continue"
   end
 end

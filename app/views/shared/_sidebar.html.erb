@@ -61,7 +61,9 @@
         </div>
       <% else %>
         <div class="space-y-3">
-          <%= link_to "Sign In", new_session_path, class: "btn text-sm h-10 w-full justify-start" %>
+          <button type="button" class="btn text-sm h-10 w-full justify-start" data-action="click->wallet-login#connectAndSign">
+            <span class="mr-2">⚡</span> Sign In
+          </button>
         </div>
       <% end %>
     </div>
