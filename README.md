@@ -3,10 +3,27 @@
 [![Ruby Version](https://img.shields.io/badge/ruby-3.4.1-red.svg)](https://www.ruby-lang.org/)
 [![Rails Version](https://img.shields.io/badge/rails-8.1.1-red.svg)](https://rubyonrails.org/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-9.3+-blue.svg)](https://www.postgresql.org/)
+[![PWA](https://img.shields.io/badge/PWA-enabled-orange.svg)](https://web.dev/progressive-web-apps/)
 [![SIWE](https://img.shields.io/badge/SIWE-EIP--4361-purple.svg)](https://eips.ethereum.org/EIPS/eip-4361)
+[![EIP-191](https://img.shields.io/badge/EIP--191-signatures-purple.svg)](https://eips.ethereum.org/EIPS/eip-191)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Web application for user authentication via Ethereum wallets using the Sign-In With Ethereum (SIWE) protocol.
+A modern Progressive Web Application (PWA) for passwordless user authentication via Ethereum wallets using the Sign-In With Ethereum (SIWE) protocol. It implements advanced cache-based security architecture with offline capabilities and real-time updates.
+
+## What You Get
+
+- **EIP-4361** Sign-In with Ethereum (SIWE) - Passwordless authentication protocol
+- **EIP-191** Ethereum Signed Messages - Signature verification with prefix
+- **PWA Support** Progressive Web Application with installable app experience
+- **Service Worker** Offline caching with cache-first and network-first strategies
+- **Web Push Notifications** Real-time notifications via Service Worker API
+- **Cache-Based Nonce Management** Stateless nonce handling with auto-expiration (10 min TTL)
+- **One-Time Nonce Protection** Prevents replay attacks and concurrent authentication attempts
+- **IP-Based Rate Limiting** Multi-layer DDoS protection (10 req/min for auth, 30 req/min for nonce)
+- **Turbo Streams** Real-time UI updates without page reloads (WebSocket-based)
+- **No Phantom Users** Users created only after successful signature verification
+- **Solid Cache/Queue/Cable** Rails 8 built-in PostgreSQL-backed infrastructure
+- **EIP-55 Compatible** Normalized Ethereum address handling (lowercase storage)
 
 ## Documentation
 
@@ -18,9 +35,11 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 
 ## Main Features
 
-- User registration and authentication via Ethereum wallets
+### Authentication & Security
+- User registration and authentication via Ethereum wallets (EIP-4361)
+- Cryptographic signature verification using EIP-191
 - Nonce generation and validation for secure signature verification
-- User session management
+- User session management with secure cookies
 - REST API for retrieving user information by Ethereum addresses
 - Secure storage of Ethereum addresses with normalization and validation
 - Multi-layer security system (cache-based):
@@ -30,28 +49,52 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
   - One-time nonce usage protection
   - No phantom users (created only after successful verification)
 
+### Progressive Web App (PWA)
+- Installable app experience on desktop and mobile devices
+- Offline-first architecture with Service Worker
+- Smart caching strategies:
+  - Cache-first for static assets (CSS, JS, fonts, images)
+  - Network-first for HTML pages with offline fallback
+  - API requests bypass cache for real-time data
+- Automatic cache versioning and cleanup
+- Web Push Notifications support
+- App manifest with custom icons and theme
+- Works seamlessly offline after first visit
+
 ## Technology Stack
 
 ### Backend
 
 - **Ruby** 3.4.1
 - **Rails** 8.1.1
-- **PostgreSQL** - primary database
-- **SIWE** (Sign-In With Ethereum) - authentication protocol
-- **Puma** - web server
-- **Solid Cache/Queue/Cable** - Rails 8 built-in solutions for caching, job queues, and WebSocket
+- **PostgreSQL** - primary database for user data, cache, queue, and cable storage
+- **SIWE Gem** - Sign-In With Ethereum library implementing EIP-4361 and EIP-191
+- **Puma** - multi-threaded web server
+- **Solid Cache** - PostgreSQL-backed cache for nonce management and rate limiting
+- **Solid Queue** - database-backed job queue for background processing
+- **Solid Cable** - database-backed WebSocket for Turbo Streams
 
-### Frontend
+### Frontend & PWA
 
-- **Hotwire** (Turbo Rails + Stimulus) - for SPA-like experience
-- **Tailwind CSS** - for styling
-- **Importmap** - JavaScript dependency management
-- **Propshaft** - modern asset pipeline
+- **Service Worker** - offline caching, push notifications, and background sync
+- **Web App Manifest** - PWA metadata for installable app experience
+- **Hotwire** (Turbo Rails + Stimulus) - SPA-like experience with minimal JavaScript
+- **Turbo Streams** - real-time partial page updates via WebSocket
+- **Tailwind CSS** - utility-first CSS framework
+- **Importmap** - modern JavaScript dependency management (no bundler)
+- **Propshaft** - Rails 8 asset pipeline with fingerprinting
+
+### Web3 & Ethereum Protocols
+
+- **EIP-4361** - Sign-In with Ethereum message format specification
+- **EIP-191** - Signed data standard for signature verification
+- **EIP-55** - Checksummed address normalization (lowercase storage)
+- **Web3 Provider API** - MetaMask, WalletConnect, and other wallet integrations
 
 ### Deployment
 
-- **Kamal** - deployment in Docker containers
-- **Thruster** - HTTP caching and compression for Puma
+- **Kamal** - zero-downtime deployment in Docker containers
+- **Thruster** - HTTP/2 caching proxy and compression for Puma
 
 ## System Dependencies
 
@@ -147,17 +190,23 @@ bin/rails test
 ```
 app/
 ├── controllers/
-│   ├── sessions_controller.rb       # Session management and SIWE authentication
+│   ├── sessions_controller.rb       # Session management and SIWE authentication (EIP-4361)
 │   ├── users_controller.rb          # User registration
-│   └── api/v1/users_controller.rb   # Nonce generation (cache-based)
+│   └── api/v1/users_controller.rb   # Nonce generation (cache-based, rate-limited)
 ├── models/
-│   └── user.rb                       # Minimal user model (eth_address only)
+│   └── user.rb                       # User model with EIP-55 address normalization
 ├── services/
-│   └── siwe_authentication_service.rb # Cache-based SIWE verification
-└── views/
-    ├── home/                         # Home page
-    ├── sessions/                     # Sign-in pages
-    └── users/                        # Registration pages
+│   └── siwe_authentication_service.rb # SIWE verification (EIP-4361 + EIP-191)
+├── views/
+│   ├── home/                         # Home page
+│   ├── sessions/                     # Sign-in pages
+│   ├── users/                        # Registration pages
+│   └── pwa/
+│       ├── service-worker.js         # PWA Service Worker (offline caching)
+│       └── manifest.json.erb         # PWA Web App Manifest
+└── javascript/
+    └── controllers/
+        └── wallet_login_controller.js # Web3 wallet integration (Stimulus)
 ```
 
 ## API Endpoints
@@ -240,6 +289,43 @@ The application uses a **cache-based approach** for nonce management:
 - Production: Solid Cache (PostgreSQL-backed)
 
 This eliminates the need for database cleanup tasks and scheduled jobs.
+
+## Progressive Web App (PWA) Architecture
+
+The application implements a full-featured PWA with Service Worker technology for offline capabilities:
+
+### Service Worker Features
+
+- **Offline Caching**: Assets and pages cached for offline access
+- **Smart Cache Strategies**:
+  - **Cache-First**: Static assets (CSS, JS, fonts, images) served from cache for instant loading
+  - **Network-First**: HTML pages fetched from network with cache fallback when offline
+  - **API Bypass**: API requests always go to network for real-time data
+- **Automatic Cache Management**: Old caches automatically cleaned up on version updates
+- **Web Push Notifications**: Support for push notifications via Service Worker API
+- **Background Sync**: Queued actions can be synced when connection restored
+
+### Installation
+
+Users can install the app to their device:
+
+1. **Desktop**: Click "Install" button in browser address bar (Chrome, Edge)
+2. **Mobile**: Tap "Add to Home Screen" from browser menu
+3. **Standalone Mode**: App runs in its own window without browser UI
+
+### Offline Functionality
+
+After first visit, the app works offline:
+- Static assets load instantly from cache
+- Previously visited pages accessible offline
+- Offline page shown for new navigation attempts
+- Seamless transition when connection restored
+
+### PWA Files
+
+- `app/views/pwa/service-worker.js` - Service Worker implementation
+- `app/views/pwa/manifest.json.erb` - Web App Manifest with icons and theme
+- `app/assets/images/` - PWA icons (192x192, 512x512, maskable)
 
 ## License
 
