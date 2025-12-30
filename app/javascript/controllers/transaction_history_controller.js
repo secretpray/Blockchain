@@ -3,7 +3,7 @@ import { BrowserProvider, formatEther } from "ethers"
 
 // TransactionHistory controller to fetch and display recent transactions for a given wallet address
 export default class extends Controller {
-  static targets = ["list", "empty", "loading"]
+  static targets = ["list", "empty", "loading", "transactionTemplate", "receivedIcon", "sentIcon"]
   static values = { address: String }
 
   async connect() {
@@ -94,57 +94,57 @@ export default class extends Controller {
   }
 
   renderTransactions(transactions) {
-    if (!this.hasListTarget) return
+    if (!this.hasListTarget || !this.hasTransactionTemplateTarget) return
 
     this.hideLoading()
     this.hideEmpty()
 
-    this.listTarget.innerHTML = transactions.map(tx => {
-      const value = formatEther(tx.value || "0")
-      const isReceived = tx.to?.toLowerCase() === this.addressValue.toLowerCase()
-      const date = tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString() : "Unknown"
-      const time = tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toLocaleTimeString() : ""
+    // Clear previous transactions
+    this.listTarget.innerHTML = ''
 
-      const txHash = tx.hash || ""
-      const shortHash = txHash ? `${txHash.slice(0, 6)}...${txHash.slice(-4)}` : "Unknown"
-      const otherAddress = isReceived ? tx.from : tx.to
-      const shortAddress = otherAddress ? `${otherAddress.slice(0, 6)}...${otherAddress.slice(-4)}` : "Unknown"
+    // Render each transaction using template
+    transactions.forEach(tx => {
+      const element = this.createTransactionElement(tx)
+      this.listTarget.appendChild(element)
+    })
+  }
 
-      return `
-        <div class="flex items-center justify-between p-4 border-b border-border/50 hover:bg-muted/20 transition-colors">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center ${isReceived ? 'bg-green-500/20' : 'bg-orange-500/20'}">
-              ${isReceived ? `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <polyline points="19 12 12 19 5 12"></polyline>
-                </svg>
-              ` : `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-500">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <polyline points="5 12 12 5 19 12"></polyline>
-                </svg>
-              `}
-            </div>
-            <div class="flex flex-col">
-              <span class="text-sm font-medium">${isReceived ? 'Received' : 'Sent'}</span>
-              <span class="text-xs text-muted-foreground font-mono">${shortAddress}</span>
-            </div>
-          </div>
-          <div class="flex flex-col items-end">
-            <span class="text-sm font-mono font-semibold ${isReceived ? 'text-green-500' : 'text-orange-500'}">
-              ${isReceived ? '+' : '-'}${parseFloat(value).toFixed(4)} ETH
-            </span>
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>${date} ${time}</span>
-              <a href="https://etherscan.io/tx/${txHash}" target="_blank" rel="noopener noreferrer" class="hover:text-primary">
-                ${shortHash}
-              </a>
-            </div>
-          </div>
-        </div>
-      `
-    }).join('')
+  createTransactionElement(tx) {
+    // Clone the template
+    const template = this.transactionTemplateTarget.content.cloneNode(true)
+    const container = template.querySelector('div')
+
+    // Calculate transaction data
+    const value = formatEther(tx.value || "0")
+    const isReceived = tx.to?.toLowerCase() === this.addressValue.toLowerCase()
+    const date = tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString() : "Unknown"
+    const time = tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toLocaleTimeString() : ""
+
+    const txHash = tx.hash || ""
+    const shortHash = txHash ? `${txHash.slice(0, 6)}...${txHash.slice(-4)}` : "Unknown"
+    const otherAddress = isReceived ? tx.from : tx.to
+    const shortAddress = otherAddress ? `${otherAddress.slice(0, 6)}...${otherAddress.slice(-4)}` : "Unknown"
+
+    // Populate the template
+    const iconContainer = container.querySelector('[data-transaction-icon]')
+    const icon = isReceived ? this.receivedIconTarget : this.sentIconTarget
+    iconContainer.appendChild(icon.content.cloneNode(true))
+    iconContainer.className = `w-10 h-10 rounded-full flex items-center justify-center ${isReceived ? 'bg-green-500/20' : 'bg-orange-500/20'}`
+
+    container.querySelector('[data-transaction-type]').textContent = isReceived ? 'Received' : 'Sent'
+    container.querySelector('[data-transaction-address]').textContent = shortAddress
+
+    const valueEl = container.querySelector('[data-transaction-value]')
+    valueEl.textContent = `${isReceived ? '+' : '-'}${parseFloat(value).toFixed(4)} ETH`
+    valueEl.className = `text-sm font-mono font-semibold ${isReceived ? 'text-green-500' : 'text-orange-500'}`
+
+    container.querySelector('[data-transaction-date]').textContent = `${date} ${time}`
+
+    const link = container.querySelector('[data-transaction-link]')
+    link.href = `https://etherscan.io/tx/${txHash}`
+    container.querySelector('[data-transaction-hash]').textContent = shortHash
+
+    return template
   }
 
   showLoading() {

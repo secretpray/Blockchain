@@ -129,6 +129,45 @@
         <!-- Transaction List -->
         <div data-transaction-history-target="list"></div>
 
+        <!-- Transaction Item Template -->
+        <template data-transaction-history-target="transactionTemplate">
+          <div class="flex items-center justify-between p-4 border-b border-border/50 hover:bg-muted/20 transition-colors">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center" data-transaction-icon>
+                <!-- Icon will be inserted here -->
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-medium" data-transaction-type></span>
+                <span class="text-xs text-muted-foreground font-mono" data-transaction-address></span>
+              </div>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="text-sm font-mono font-semibold" data-transaction-value></span>
+              <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                <span data-transaction-date></span>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="hover:text-primary" data-transaction-link>
+                  <span data-transaction-hash></span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Icons Templates -->
+        <template data-transaction-history-target="receivedIcon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+          </svg>
+        </template>
+
+        <template data-transaction-history-target="sentIcon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-500">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
+        </template>
+
         <!-- Empty State -->
         <div data-transaction-history-target="empty" class="p-8 text-center hidden">
           <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4 opacity-50">

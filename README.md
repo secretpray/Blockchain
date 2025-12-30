@@ -14,12 +14,16 @@ A modern Progressive Web Application (PWA) for passwordless user authentication 
 
 - **EIP-4361** Sign-In with Ethereum (SIWE) - Passwordless authentication protocol
 - **EIP-191** Ethereum Signed Messages - Signature verification with prefix
+- **EIP-155** Chain ID Validation - Multi-network support with security
+- **Multi-Chain Support** Works with Ethereum Mainnet, Sepolia, Polygon, and more
+- **Dynamic Network Detection** Automatically detects user's wallet network
 - **PWA Support** Progressive Web Application with installable app experience
 - **Service Worker** Offline caching with cache-first and network-first strategies
 - **Web Push Notifications** Real-time notifications via Service Worker API
 - **Cache-Based Nonce Management** Stateless nonce handling with auto-expiration (10 min TTL)
 - **One-Time Nonce Protection** Prevents replay attacks and concurrent authentication attempts
 - **IP-Based Rate Limiting** Multi-layer DDoS protection (10 req/min for auth, 30 req/min for nonce)
+- **Message Age Validation** 5-minute maximum for signed messages
 - **Turbo Streams** Real-time UI updates without page reloads (WebSocket-based)
 - **No Phantom Users** Users created only after successful signature verification
 - **Solid Cache/Queue/Cable** Rails 8 built-in PostgreSQL-backed infrastructure
@@ -38,6 +42,13 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 ### Authentication & Security
 - User registration and authentication via Ethereum wallets (EIP-4361)
 - Cryptographic signature verification using EIP-191
+- Multi-chain support with dynamic Chain ID detection (EIP-155)
+- Supported networks:
+  - Ethereum Mainnet (1)
+  - Sepolia Testnet (11155111)
+  - Polygon Mainnet (137)
+  - Polygon Mumbai Testnet (80001)
+  - Hardhat Local (31337) - development only
 - Nonce generation and validation for secure signature verification
 - User session management with secure cookies
 - REST API for retrieving user information by Ethereum addresses
@@ -47,6 +58,8 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
   - Nonce endpoint rate limiting (30 requests/min per IP:address)
   - Nonce TTL with auto-expiration (10 minutes)
   - One-time nonce usage protection
+  - Chain ID validation (whitelist-based)
+  - Message age validation (max 5 minutes)
   - No phantom users (created only after successful verification)
 
 ### Progressive Web App (PWA)
@@ -88,8 +101,10 @@ Blockchain Auth is a modern Ruby on Rails 8 application that demonstrates Web3 a
 
 - **EIP-4361** - Sign-In with Ethereum message format specification
 - **EIP-191** - Signed data standard for signature verification
+- **EIP-155** - Chain ID validation for multi-network support
 - **EIP-55** - Checksummed address normalization (lowercase storage)
 - **Web3 Provider API** - MetaMask, WalletConnect, and other wallet integrations
+- **Dynamic Network Detection** - Automatically adapts to user's wallet network
 
 ### Deployment
 
@@ -201,7 +216,7 @@ app/
 ├── models/
 │   └── user.rb                       # User model with EIP-55 address normalization
 ├── services/
-│   └── siwe_authentication_service.rb # SIWE verification (EIP-4361 + EIP-191)
+│   └── siwe_authentication_service.rb # SIWE verification (EIP-4361 + EIP-191 + EIP-155)
 ├── views/
 │   ├── root/                         # Home page with wallet login
 │   ├── wallet/                       # Wallet dashboard

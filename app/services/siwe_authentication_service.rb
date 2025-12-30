@@ -6,6 +6,16 @@ class SiweAuthenticationService
   attr_reader :eth_address, :message, :signature, :request, :errors, :user
 
   NONCE_TTL = 10.minutes
+  MESSAGE_EXPIRATION = 5.minutes # Maximum age of signed message
+
+  # Allowed Chain IDs (EIP-155)
+  # 1 = Ethereum Mainnet
+  # 5 = Goerli Testnet (deprecated)
+  # 11155111 = Sepolia Testnet
+  # 137 = Polygon Mainnet
+  # 80001 = Polygon Mumbai Testnet
+  # 31337 = Hardhat local network (for development)
+  ALLOWED_CHAIN_IDS = [ 1, 5, 11155111, 137, 80001, 31337 ].freeze
 
   def initialize(eth_address:, message:, signature:, request:)
     @eth_address = eth_address.downcase
@@ -18,12 +28,16 @@ class SiweAuthenticationService
 
   # Perform full authentication flow with security checks
   def authenticate
+    Rails.logger.info("Authentication attempt for address: #{@eth_address}")
+
     return false unless perform_security_checks
     return false unless verify_signature
 
     # CRITICAL: Create User ONLY after successful verification
     create_or_find_user
     invalidate_nonce
+
+    Rails.logger.info("Authentication successful for address: #{@eth_address}")
     true
   end
 
@@ -41,6 +55,7 @@ class SiweAuthenticationService
     # 2. Check if nonce was already used (one-time use)
     if nonce_already_used?(cached_nonce)
       @errors << "Nonce already used. Please request a new one."
+      Rails.logger.warn("Nonce reuse attempt detected for address: #{@eth_address}")
       return false
     end
 
@@ -67,11 +82,31 @@ class SiweAuthenticationService
 
   # Verify SIWE signature and message
   def verify_signature
+    # 1. Verify address matches
     unless @siwe_message.address.to_s.downcase == @eth_address
       @errors << "Address mismatch"
       return false
     end
 
+    # 2. Verify Chain ID is allowed (EIP-155 compliance)
+    chain_id = @siwe_message.chain_id.to_i
+    unless ALLOWED_CHAIN_IDS.include?(chain_id)
+      @errors << "Unsupported chain. Please switch to a supported network."
+      Rails.logger.warn("Unsupported Chain ID: #{chain_id}. Allowed: #{ALLOWED_CHAIN_IDS.join(', ')}")
+      return false
+    end
+
+    # 3. Verify message timestamp is not too old
+    if @siwe_message.issued_at
+      issued_at = Time.parse(@siwe_message.issued_at)
+      if Time.current - issued_at > MESSAGE_EXPIRATION
+        @errors << "Signature expired. Please sign a new message."
+        Rails.logger.warn("Message too old: issued at #{issued_at}, current time #{Time.current}")
+        return false
+      end
+    end
+
+    # 4. Verify signature
     @siwe_message.verify(
       @signature,
       @request.host_with_port,
@@ -104,6 +139,7 @@ class SiweAuthenticationService
 
   def create_or_find_user
     @user = User.find_or_create_by!(eth_address: @eth_address)
+    Rails.logger.info("User found or created: #{@user.id} (#{@eth_address})")
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error("Failed to create user: #{e.message}")
     @errors << "Failed to create user account."
