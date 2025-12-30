@@ -31,7 +31,11 @@ export default class extends Controller {
         return
       }
 
-      // 2) Prepare SIWE message (EIP-4361)
+      // 2) Get Chain ID from wallet (dynamic network detection)
+      const network = await provider.getNetwork()
+      const chainId = network.chainId
+
+      // 3) Prepare SIWE message (EIP-4361)
       const domain = window.location.host
       const uri = window.location.origin
       const issuedAt = new Date().toISOString()
@@ -44,16 +48,16 @@ Sign in to the app.
 
 URI: ${uri}
 Version: 1
-Chain ID: 1
+Chain ID: ${chainId}
 Nonce: ${data.eth_nonce}
 Issued At: ${issuedAt}
 Expiration Time: ${expirationTime}`
 
-      // 3) Sign message
+      // 4) Sign message
       const signer = await provider.getSigner()
       const signature = await signer.signMessage(message)
 
-      // 4) Submit form
+      // 5) Submit form
       this.addressTarget.value = account
       this.messageTarget.value = message
       this.signatureTarget.value = signature

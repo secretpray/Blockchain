@@ -158,29 +158,41 @@ Sign in to Example App
 
 URI: https://example.com
 Version: 1
-Chain ID: 1
+Chain ID: 11155111
 Nonce: YqnKjNL8pREgNv8s
 Issued At: 2025-12-27T10:30:00Z
-Expiration Time: 2025-12-27T11:30:00Z
+Expiration Time: 2025-12-27T10:35:00Z
 ```
 
 **Client Side:**
 ```javascript
-// 2. Build SIWE message
-const message = new SiweMessage({
-  domain: window.location.host,
-  address: address,
-  statement: "Sign in to Blockchain Auth",
-  uri: window.location.origin,
-  version: '1',
-  chainId: 1,
-  nonce: nonceFromServer,  // Received from Rails
-  issuedAt: new Date().toISOString(),
-  expirationTime: new Date(Date.now() + 3600000).toISOString() // 1 hour
-});
+// 2. Get Chain ID from wallet (dynamic network detection)
+const network = await provider.getNetwork()
+const chainId = network.chainId
 
-const messageString = message.prepareMessage();
+// 3. Build SIWE message
+const domain = window.location.host
+const uri = window.location.origin
+const issuedAt = new Date().toISOString()
+const expirationTime = new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+
+const message = `${domain} wants you to sign in with your Ethereum account:
+${account}
+
+Sign in to the app.
+
+URI: ${uri}
+Version: 1
+Chain ID: ${chainId}
+Nonce: ${data.eth_nonce}
+Issued At: ${issuedAt}
+Expiration Time: ${expirationTime}`
 ```
+
+**Key improvements:**
+- **Dynamic Chain ID**: Automatically detected from user's wallet (supports Mainnet, Sepolia, Polygon, etc.)
+- **Shorter expiration**: 5 minutes instead of 1 hour for better security
+- **Network flexibility**: Works with any supported network the user is connected to
 
 ### Phase 3: Cryptographic Signature
 
@@ -241,7 +253,25 @@ def verify_signature
   # 1. Verify address matches
   return false unless siwe.address.to_s.downcase == user.eth_address
 
-  # 2. Comprehensive SIWE verification (throws exceptions on failure)
+  # 2. Verify Chain ID is allowed (EIP-155 compliance)
+  chain_id = @siwe_message.chain_id.to_i
+  unless ALLOWED_CHAIN_IDS.include?(chain_id)
+    @errors << "Unsupported chain. Please switch to a supported network."
+    Rails.logger.warn("Unsupported Chain ID: #{chain_id}. Allowed: #{ALLOWED_CHAIN_IDS.join(', ')}")
+    return false
+  end
+
+  # 3. Verify message timestamp is not too old
+  if @siwe_message.issued_at
+    issued_at = Time.parse(@siwe_message.issued_at)
+    if Time.current - issued_at > MESSAGE_EXPIRATION
+      @errors << "Signature expired. Please sign a new message."
+      Rails.logger.warn("Message too old: issued at #{issued_at}, current time #{Time.current}")
+      return false
+    end
+  end
+
+  # 4. Comprehensive SIWE verification (throws exceptions on failure)
   siwe.verify(
     signature,
     request.host_with_port,  # Domain binding
@@ -503,7 +533,18 @@ All security parameters are defined in respective controllers and services:
 
 ```ruby
 # SiweAuthenticationService
-NONCE_TTL = 10.minutes  # Layer 3: Cache TTL for nonces
+NONCE_TTL = 10.minutes           # Layer 3: Cache TTL for nonces
+MESSAGE_EXPIRATION = 5.minutes   # Maximum age of signed message
+
+# Allowed Chain IDs (EIP-155)
+ALLOWED_CHAIN_IDS = [
+  1,         # Ethereum Mainnet
+  5,         # Goerli Testnet (deprecated)
+  11155111,  # Sepolia Testnet
+  137,       # Polygon Mainnet
+  80001,     # Polygon Mumbai Testnet
+  31337      # Hardhat local network (for development)
+].freeze
 
 # SessionsController
 rate_limit to: 10, within: 1.minute  # Layer 1: IP-based auth limit
@@ -554,6 +595,23 @@ rate_limit to: 30, within: 1.minute  # Layer 2: Nonce endpoint limit
 - **Problem**: Ethereum addresses are case-insensitive, but string comparison isn't
 - **Solution**: Normalize to lowercase before comparison
 - **Implementation**: `eth_address.downcase` everywhere
+
+### 7. **Chain ID Validation (EIP-155)**
+- **Problem**: Users could sign messages on unsupported networks
+- **Solution**: Whitelist of allowed Chain IDs with server-side validation
+- **Implementation**: `ALLOWED_CHAIN_IDS.include?(chain_id)` check
+- **Supported Networks**:
+  - Ethereum Mainnet (1)
+  - Sepolia Testnet (11155111)
+  - Polygon Mainnet (137)
+  - Polygon Mumbai Testnet (80001)
+  - Hardhat Local (31337 - development only)
+
+### 8. **Message Age Validation**
+- **Problem**: Old signatures could be reused if intercepted
+- **Solution**: Check message issued_at timestamp (max 5 minutes old)
+- **Implementation**: `Time.current - issued_at > MESSAGE_EXPIRATION` check
+- **Benefit**: Reduces replay attack window from hours to minutes
 
 ## Comparison Table
 
@@ -719,5 +777,5 @@ Key files implementing this algorithm:
 
 ---
 
-**Last Updated**: December 28, 2025
-**Version**: 3.0 - Cache-based implementation (removed DB-based nonce storage, phantom users, and cron tasks)
+**Last Updated**: December 30, 2025
+**Version**: 3.1 - Multi-chain support with dynamic Chain ID detection and enhanced security checks
