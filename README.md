@@ -1,4 +1,4 @@
-# Blockchain Auth - SIWE Rails 8
+# Blockchain Auth - SIWE Rails 8 (gem 'siwe')
 
 [![Ruby Version](https://img.shields.io/badge/ruby-3.4.1-red.svg)](https://www.ruby-lang.org/)
 [![Rails Version](https://img.shields.io/badge/rails-8.1.1-red.svg)](https://rubyonrails.org/)
