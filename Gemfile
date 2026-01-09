@@ -8,7 +8,7 @@ gem "kamal", require: false
 gem "pg", "~> 1.1"
 gem "propshaft"
 gem "puma", ">= 5.0"
-gem "rails", "~> 8.1.1"
+gem "rails", "~> 8.1.2"
 gem "siwe" # Sign-In with Ethereum library
 gem "solid_cable"
 gem "solid_cache"
